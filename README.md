@@ -1,6 +1,9 @@
 # ZAPXSELENIUM
 Checkmarx ZAP JavaScript-based Selenium automation script to perform authenticated scans.
 
+![image](https://github.com/user-attachments/assets/b69edbe9-0d91-4fdd-985d-a4dd557a52d1)
+
+
 # ZAP Authenticated Scan Script for Testphp Vulnweb
 
 This JavaScript automates the authentication process for the Testphp Vulnweb application within OWASP ZAP. It leverages Selenium WebDriver to interact with the web interface. The script initializes a Chrome browser instance, configured to proxy traffic through ZAP. It then navigates to the target login URL provided as a parameter. It locates the username and password input fields using their names ("uname" and "pass" respectively) and populates them with hardcoded credentials ("test" / "test"). After filling the credentials, the script identifies and clicks the login button using its XPath. It then waits for the login process to complete. Crucially, the script captures the session cookie named "login" from the browser after successful authentication. This session ID is essential for subsequent authenticated scanning. The script then interacts with ZAP's HTTP Sessions extension. It retrieves the HTTP Sessions Site for the target domain. If a session with the captured "login" cookie value exists, it's set as active. If no matching session is found, a new session is created with the "login" token and its value, added to the site, and then set as the active session. Finally, the script keeps the browser open for 30 seconds before closing it, allowing ZAP to utilize the authenticated session for further scanning.
