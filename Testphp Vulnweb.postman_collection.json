@@ -1,0 +1,941 @@
+{
+	"info": {
+		"_postman_id": "550d3289-89b1-49da-9057-0f95134ceb21",
+		"name": "Testphp Vulnweb",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19347937"
+	},
+	"item": [
+		{
+			"name": "Drop Sessions if Exist",
+			"item": [
+				{
+					"name": "Unset Sessions",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "site",
+									"value": "{{siteurl}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/httpSessions/action/unsetActiveSession/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"httpSessions",
+								"action",
+								"unsetActiveSession",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var hardcodedSessions = [",
+									"    'Session 0', 'Session 1', 'Session 2', 'Session 3', ",
+									"    'Session 4', 'Session 5', 'Session 6', 'Session 7', ",
+									"    'Session 8', 'Session 9', 'Session 10','Session 11', ",
+									"    'Session 12', 'Session 13', 'Session 14', 'Session 15', ",
+									"    'Session 16', 'Session 17', 'Session 18', 'Session 19', ",
+									"    'Session 20', 'Session 21'",
+									"];",
+									"",
+									"// Get the response JSON",
+									"try {",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    // Check if sessions are available",
+									"    if (jsonData && jsonData.sessions && jsonData.sessions.length > 0) {",
+									"        // Filter the sessions that match the hardcoded identifiers",
+									"        var matchingSessions = jsonData.sessions.filter(function(item) {",
+									"            return hardcodedSessions.includes(item.session[0]); // Compare with hardcoded array",
+									"        });",
+									"",
+									"        // If there are matching sessions, store them in the environment variable",
+									"        if (matchingSessions.length > 0) {",
+									"            pm.environment.set(\"matchingSessions\", JSON.stringify(matchingSessions));",
+									"            pm.environment.set(\"sessionIndex\", 0); // Initialize index for iteration",
+									"            pm.execution.setNextRequest(\"Remove Sessions\"); // Proceed to delete sessions",
+									"        } else {",
+									"            console.log(\"No matching sessions found.\");",
+									"            pm.environment.unset(\"matchingSessions\");",
+									"        }",
+									"",
+									"    } else {",
+									"        console.log(\"No sessions found.\");",
+									"        pm.environment.unset(\"matchingSessions\");",
+									"    }",
+									"} catch (e) {",
+									"    console.log(\"Error parsing JSON response: \" + e);",
+									"    pm.environment.unset(\"matchingSessions\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8888/JSON/httpSessions/view/sessions/?apikey={{apikey}}&site={{siteurl}}",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8888",
+							"path": [
+								"JSON",
+								"httpSessions",
+								"view",
+								"sessions",
+								""
+							],
+							"query": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}"
+								},
+								{
+									"key": "site",
+									"value": "{{siteurl}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Sessions",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Retrieve the matching sessions and current index",
+									"var matchingSessions = pm.environment.get(\"matchingSessions\");",
+									"var sessionIndex = pm.environment.get(\"sessionIndex\");",
+									"",
+									"// Check if matchingSessions and sessionIndex are properly set",
+									"if (matchingSessions && sessionIndex !== undefined) {",
+									"    matchingSessions = JSON.parse(matchingSessions);",
+									"    sessionIndex = parseInt(sessionIndex, 10);",
+									"",
+									"    // Ensure sessionIndex is within bounds",
+									"    if (sessionIndex < matchingSessions.length) {",
+									"        // Get the current session identifier",
+									"        var currentSession = matchingSessions[sessionIndex].session[0];",
+									"        console.log(\"Deleting session: \" + currentSession);",
+									"",
+									"        // Set the session identifier as a variable for the request",
+									"        pm.variables.set(\"session\", currentSession);",
+									"",
+									"        // Update the session index for the next iteration",
+									"        sessionIndex++;",
+									"        pm.environment.set(\"sessionIndex\", sessionIndex);",
+									"",
+									"        // Check if there are more sessions to delete",
+									"        if (sessionIndex < matchingSessions.length) {",
+									"            pm.execution.setNextRequest(\"Remove Sessions\"); // Repeat the delete request",
+									"        } else {",
+									"            console.log(\"All matching sessions have been deleted.\");",
+									"            // Clear the environment variables when done",
+									"            pm.environment.unset(\"matchingSessions\");",
+									"            pm.environment.unset(\"sessionIndex\");",
+									"            pm.execution.setNextRequest(\"Import Context\"); // Continue with the next request in the collection",
+									"        }",
+									"    } else {",
+									"        console.log(\"Session index out of bounds or no more sessions to delete.\");",
+									"        // Clear the environment variables when done",
+									"        pm.environment.unset(\"matchingSessions\");",
+									"        pm.environment.unset(\"sessionIndex\");",
+									"        pm.execution.setNextRequest(\"Import Context\"); // Continue with the next request in the collection",
+									"    }",
+									"} else {",
+									"    console.log(\"matchingSessions or sessionIndex is not properly set or no sessions found.\");",
+									"    // Clear the environment variables when done",
+									"    pm.environment.unset(\"matchingSessions\");",
+									"    pm.environment.unset(\"sessionIndex\");",
+									"    pm.execution.setNextRequest(\"Import Context\"); // Continue with the next request in the collection",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// // Get the list of matching sessions",
+									"// var matchingSessions = pm.globals.get(\"sessionIdentifiers\");",
+									"// console.log(sessionIdentifiers);",
+									"// if (matchingSessions && matchingSessions !== \"[]\") {",
+									"//     // Parse the matching sessions list",
+									"//     matchingSessions = JSON.parse(matchingSessions);",
+									"",
+									"//     // Check if there are any sessions left to delete",
+									"//     if (matchingSessions.length > 0) {",
+									"//         // Get the current session identifier",
+									"//         var currentSession = pm.environment.get(\"currentSession\");",
+									"",
+									"//         // Set the session variable for the current request",
+									"//         pm.variables.set(\"session\", currentSession);",
+									"",
+									"//         // Remove the deleted session from the list and update the environment variable",
+									"//         matchingSessions.shift();",
+									"//         pm.environment.set(\"matchingSessions\", JSON.stringify(matchingSessions));",
+									"",
+									"//         // If there are more sessions to delete, set the next request to delete the next one",
+									"//         if (matchingSessions.length > 0) {",
+									"//             pm.environment.set(\"currentSession\", matchingSessions[0].session[0]);",
+									"//             postman.setNextRequest(\"Remove Sessions\");",
+									"//         } else {",
+									"//             // All matching sessions have been deleted",
+									"//             postman.setNextRequest(null); // End the request chain",
+									"//         }",
+									"",
+									"//     } else {",
+									"//         console.log(\"No more matching sessions left to delete.\");",
+									"//         postman.setNextRequest(null); // End the request chain",
+									"//     }",
+									"// } else {",
+									"//     console.log(\"No matching sessions found to delete.\");",
+									"//     postman.setNextRequest(null); // End the request chain",
+									"// }"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "site",
+									"value": "{{siteurl}}",
+									"type": "text"
+								},
+								{
+									"key": "session",
+									"value": "{{session}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8888/JSON/httpSessions/action/removeSession/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8888",
+							"path": [
+								"JSON",
+								"httpSessions",
+								"action",
+								"removeSession",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Import Context",
+			"item": [
+				{
+					"name": "Import Context",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var extractContext = JSON.parse(responseBody);",
+									"console.log(extractContext);",
+									"var contextValue = extractContext.contextId; ",
+									"console.log(contextValue);",
+									"pm.globals.set(\"contextValue\", contextValue);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "contextFile",
+									"value": "C:\\\\Users\\\\xtrem\\\\Downloads\\\\Compressed\\\\drive-download-20250505T145952Z-1-001\\\\testphpvulnbweb.context.xml",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/context/action/importContext/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"context",
+								"action",
+								"importContext",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Initiate Selenium Automation",
+			"item": [
+				{
+					"name": "Get User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the JSON response",
+									"var responseJson = JSON.parse(responseBody);",
+									"",
+									"// Log the entire response to the console (for debugging purposes)",
+									"console.log(responseJson);",
+									"",
+									"// Extract the id value from the nested structure",
+									"var userId = responseJson.usersList[0].id;",
+									"",
+									"// Log the id to the console (for debugging purposes)",
+									"console.log(userId);",
+									"",
+									"// Set the id as a global variable in Postman",
+									"pm.globals.set(\"userId\", userId);",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}JSON/users/view/usersList/?apikey={{apikey}}&contextId={{contextValue}}",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"users",
+								"view",
+								"usersList",
+								""
+							],
+							"query": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}"
+								},
+								{
+									"key": "contextId",
+									"value": "{{contextValue}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Authenticate As User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"/*// Parse the JSON response",
+									"var responseJson = JSON.parse(responseBody);",
+									"",
+									"// Log the entire response to the console (for debugging purposes)",
+									"console.log(responseJson);",
+									"",
+									"// Extract the scanId value from the response",
+									"var scanId = responseJson.scanAsUser;",
+									"",
+									"// Log the scanId to the console (for debugging purposes)",
+									"console.log(scanId);",
+									"",
+									"// Set the scanId as a global variable in Postman",
+									"pm.globals.set(\"scanId\", scanId);",
+									"",
+									"// Define the delay function",
+									"function delay(milliseconds) {",
+									"    return new Promise(resolve => setTimeout(resolve, milliseconds));",
+									"}",
+									"",
+									"// Delay of 70000 milliseconds (1 minute 10 seconds)",
+									"delay(90000).then(() => {",
+									"    postman.setNextRequest('Pause Spider');",
+									"}); */",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "contextId",
+									"value": "{{contextValue}}",
+									"type": "text"
+								},
+								{
+									"key": "userId",
+									"value": "{{userId}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/users/action/authenticateAsUser/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"users",
+								"action",
+								"authenticateAsUser",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Crawl Application",
+			"item": [
+				{
+					"name": "Exclude From Spider",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "regex",
+									"value": "https:\\/\\/testphp\\.vulnweb\\.com\\/logout.php",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/spider/action/excludeFromScan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"spider",
+								"action",
+								"excludeFromScan",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run Spider",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the JSON response",
+									"var responseJson = JSON.parse(responseBody);",
+									"",
+									"// Log the entire response to the console (for debugging purposes)",
+									"console.log(responseJson);",
+									"",
+									"// Extract the scan value from the response",
+									"var scanId2 = responseJson.scan;",
+									"",
+									"// Log the scanId to the console (for debugging purposes)",
+									"console.log(scanId2);",
+									"",
+									"// Set the scanId as a global variable in Postman",
+									"pm.globals.set(\"scanId2\", scanId2);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "url",
+									"value": "{{siteurl}}",
+									"type": "text"
+								},
+								{
+									"key": "maxChildren",
+									"value": "30",
+									"type": "text"
+								},
+								{
+									"key": "recurse",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "contextName",
+									"value": "testphpvulnbweb",
+									"type": "text"
+								},
+								{
+									"key": "subtreeOnly",
+									"value": "false",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/spider/action/scan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"spider",
+								"action",
+								"scan",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Spider Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"",
+									"if (parseInt(data.status) == \"100\") {",
+									"        postman.setNextRequest('Run Ajax Spider');",
+									"        tests[\"Spider Completed!\"] = true;",
+									"} else {",
+									"    setTimeout(function() {",
+									"        postman.setNextRequest('Check Spider Status');",
+									"        tests[\"Spider Not Complete!\"] = true;",
+									"    }, 3000);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "scanId",
+									"value": "{{scanId2}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/spider/view/status/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"spider",
+								"view",
+								"status",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run Ajax Spider",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "url",
+									"value": "{{siteurl}}",
+									"type": "text"
+								},
+								{
+									"key": "contextName",
+									"value": "testphpvulnbweb",
+									"type": "text"
+								},
+								{
+									"key": "subtreeOnly",
+									"value": "false",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/ajaxSpider/action/scan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"ajaxSpider",
+								"action",
+								"scan",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attack Application",
+			"item": [
+				{
+					"name": "Run Additional Spider",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the JSON response",
+									"var responseJson = JSON.parse(responseBody);",
+									"",
+									"// Log the entire response to the console (for debugging purposes)",
+									"console.log(responseJson);",
+									"",
+									"// Extract the scan value from the response",
+									"var scanId2 = responseJson.scan;",
+									"",
+									"// Log the scanId to the console (for debugging purposes)",
+									"console.log(scanId2);",
+									"",
+									"// Set the scanId as a global variable in Postman",
+									"pm.globals.set(\"scanId2\", scanId2);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "url",
+									"value": "{{siteurl}}",
+									"type": "text"
+								},
+								{
+									"key": "maxChildren",
+									"value": "30",
+									"type": "text"
+								},
+								{
+									"key": "recurse",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "contextName",
+									"value": "testphpvulnbweb",
+									"type": "text"
+								},
+								{
+									"key": "subtreeOnly",
+									"value": "false",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/spider/action/scan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"spider",
+								"action",
+								"scan",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set Option Thread Per Host",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "Integer",
+									"value": "10",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/ascan/action/setOptionThreadPerHost/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"ascan",
+								"action",
+								"setOptionThreadPerHost",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Exclude From Scan",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "regex",
+									"value": "https:\\/\\/testphp\\.vulnweb\\.com\\/logout.php",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/ascan/action/excludeFromScan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"ascan",
+								"action",
+								"excludeFromScan",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run Active Scan",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "apikey",
+									"value": "{{apikey}}",
+									"type": "text"
+								},
+								{
+									"key": "url",
+									"value": "{{siteurl}}",
+									"type": "text"
+								},
+								{
+									"key": "recurse",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "contextId",
+									"value": "{{contextValue}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}JSON/ascan/action/scan/",
+							"host": [
+								"{{baseUrl}}JSON"
+							],
+							"path": [
+								"ascan",
+								"action",
+								"scan",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8888/",
+			"type": "string"
+		},
+		{
+			"key": "apikey",
+			"value": "eofg3nhf4mgq2m8sm2dkla8e6q",
+			"type": "string"
+		},
+		{
+			"key": "siteurl",
+			"value": "http://testphp.vulnweb.com/login.php",
+			"type": "string"
+		},
+		{
+			"key": "spiderId",
+			"value": ""
+		}
+	]
+}
