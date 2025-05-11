@@ -1,5 +1,5 @@
 # ZAPXSELENIUM
-Checkmarx ZAP JavaScript based selenium automation script for performing authenticated scan
+Checkmarx ZAP JavaScript-based Selenium automation script to perform authenticated scans.
 
 # ZAP Authenticated Scan Script for Testphp Vulnweb
 
